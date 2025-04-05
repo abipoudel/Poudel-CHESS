@@ -89,13 +89,12 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
     }
 
     squares.forEach( square => {
-        square.addEventListener("click", function () {
-            movePiece(this);
-        });
-        square.addEventListener("touchstart", function (event) {
-            event.preventDefault(); // Prevent zoom/scroll
-            movePiece(this);
-        }, { passive: false });
+        square.addEventListener("pointerdown", function (event) {
+            if (event.pointerType === "touch" || event.pointerType === "mouse") {
+                movePiece(this);
+            }
+        }, { passive: true }); // Passive improves scroll performance
+        
         
        
     });
@@ -111,12 +110,11 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
     document.querySelectorAll('img.piece').forEach( pieceImg => {
        
         pieceImg.addEventListener("touchstart", function (event) {
-            if (gameState === 'ai_thinking') return;
-        
-            event.stopPropagation();
-            clearSquares();
-            setAllowedSquares(event.target);
-        });
+    event.stopPropagation();
+    clearSquares();
+    setAllowedSquares(event.target);
+    }, { passive: true }); // boost performance
+
         
     });
 
