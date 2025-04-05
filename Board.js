@@ -92,12 +92,12 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
         square.addEventListener("click", function () {
             movePiece(this);
         });
-        square.addEventListener("dragover", function(event){
-            event.preventDefault();
-        });
-        square.addEventListener("drop", function () {
+        square.addEventListener("touchstart", function (event) {
+            event.preventDefault(); // Prevent zoom/scroll
             movePiece(this);
-        });
+        }, { passive: false });
+        
+       
     });
 
     game.pieces.forEach( piece => {
@@ -109,23 +109,15 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
     });
 
     document.querySelectorAll('img.piece').forEach( pieceImg => {
-        pieceImg.addEventListener("dragstart", function(event) {
-            if (gameState === 'ai_thinking') {
-                return;
-            }
-            event.stopPropagation();
-            event.dataTransfer.setData("text", event.target.id);
-            clearSquares();
-            setAllowedSquares(event.target)
-        });
-        pieceImg.addEventListener("drop", function(event) {
-            if (gameState === 'ai_thinking') {
-                return;
-            }
+       
+        pieceImg.addEventListener("touchstart", function (event) {
+            if (gameState === 'ai_thinking') return;
+        
             event.stopPropagation();
             clearSquares();
-            setAllowedSquares(event.target)
+            setAllowedSquares(event.target);
         });
+        
     });
 
     const startTurn = turn => {

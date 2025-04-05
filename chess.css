@@ -25,6 +25,7 @@ body{
 	text-align: right;
 }
 #board{
+	touch-action: none;
 	aspect-ratio: 1 / 1;
 	margin: auto;
 	border:3px #333 solid;
