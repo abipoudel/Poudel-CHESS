@@ -1,13 +1,14 @@
 const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', aiLevel: 'dumb' }) => {
-
     const aiPlayer = options.playAgainst === 'ai' ? ai(options.aiColor) : null;
 
-    const board   = document.getElementById('board');
+    const board = document.getElementById('board');
     const squares = board.querySelectorAll('.square');
     const whiteSematary = document.getElementById('whiteSematary');
     const blackSematary = document.getElementById('blackSematary');
     const turnSign = document.getElementById('turn');
     let clickedPieceName;
+
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints;
 
     const resetSematary = () => {
         whiteSematary.querySelectorAll('div').forEach(div => div.innerHTML = '');
@@ -45,36 +46,30 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
             const clickedSquare = pieceImg.parentNode;
             clickedSquare.classList.add('clicked-square');
 
-            allowedMoves.forEach( allowedMove => {
+            allowedMoves.forEach(allowedMove => {
                 if (document.contains(document.getElementById(allowedMove))) {
                     document.getElementById(allowedMove).classList.add('allowed');
                 }
             });
-        }
-        else{
+        } else {
             clearSquares();
         }
     }
 
     const clearSquares = () => {
-        board.querySelectorAll('.allowed').forEach( allowedSquare => allowedSquare.classList.remove('allowed') );
-
-        const clickedSquare = document.getElementsByClassName('clicked-square')[0];
-        if (clickedSquare) {
-            clickedSquare.classList.remove('clicked-square');
-        }
+        board.querySelectorAll('.allowed').forEach(square => square.classList.remove('allowed'));
+        const clickedSquare = document.querySelector('.clicked-square');
+        if (clickedSquare) clickedSquare.classList.remove('clicked-square');
     }
 
     const setLastMoveSquares = (from, to) => {
-        document.querySelectorAll('.last-move').forEach( lastMoveSquare => lastMoveSquare.classList.remove('last-move') );
+        document.querySelectorAll('.last-move').forEach(square => square.classList.remove('last-move'));
         from.classList.add('last-move');
         to.classList.add('last-move');
     }
 
     function movePiece(square) {
-        if (gameState === 'ai_thinking') {
-            return;
-        }
+        if (gameState === 'ai_thinking') return;
 
         const position = square.getAttribute('id');
         const existedPiece = game.getPieceByPos(position);
@@ -88,34 +83,48 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
         game.movePiece(clickedPieceName, position);
     }
 
-    squares.forEach( square => {
+    // Add event to all squares (touch and mouse)
+    squares.forEach(square => {
         square.addEventListener("pointerdown", function (event) {
             if (event.pointerType === "touch" || event.pointerType === "mouse") {
                 movePiece(this);
             }
-        }, { passive: true }); // Passive improves scroll performance
-        
-        
-       
+        }, { passive: true });
     });
 
-    game.pieces.forEach( piece => {
+    // Handle piece drops (in case you drag/drop)
+    game.pieces.forEach(piece => {
         const pieceImg = document.getElementById(piece.name);
-        pieceImg.addEventListener("drop", function () {
-            const square = document.getElementById(piece.position);
-            movePiece(square);
-        });
+        if (pieceImg) {
+            pieceImg.addEventListener("drop", () => {
+                const square = document.getElementById(piece.position);
+                movePiece(square);
+            });
+        }
     });
 
-    document.querySelectorAll('img.piece').forEach( pieceImg => {
-       
-        pieceImg.addEventListener("touchstart", function (event) {
-    event.stopPropagation();
-    clearSquares();
-    setAllowedSquares(event.target);
-    }, { passive: true }); // boost performance
+    // ✅ THIS IS THE NEW UNIFIED HANDLING
+    const addEventListeners = (pieceImg) => {
+        if (isTouchDevice) {
+            pieceImg.addEventListener("touchstart", (event) => {
+                event.stopPropagation();
+                clearSquares();
+                setAllowedSquares(event.target);
+            }, { passive: true });
+        } else {
+            pieceImg.addEventListener("pointerdown", (event) => {
+                if (event.pointerType === "mouse") {
+                    event.stopPropagation();
+                    clearSquares();
+                    setAllowedSquares(event.target);
+                }
+            }, { passive: true });
+        }
+    }
 
-        
+    // Apply to all piece images
+    document.querySelectorAll('img.piece').forEach(pieceImg => {
+        addEventListeners(pieceImg);
     });
 
     const startTurn = turn => {
@@ -134,9 +143,8 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
     game.on('pieceMove', move => {
         const from = document.getElementById(move.from);
         const to = document.getElementById(move.piece.position);
-        to.append( document.getElementById(move.piece.name) );
+        to.append(document.getElementById(move.piece.name));
         clearSquares();
-
         setLastMoveSquares(from, to);
     });
 
@@ -145,26 +153,27 @@ const startBoard = (game, options = { playAgainst: 'human', aiColor: 'black', ai
     game.on('promotion', queen => {
         const square = document.getElementById(queen.position);
         square.innerHTML = `<img class="piece queen" id="${queen.name}" src="img/${queen.color}-queen.webp">`;
-    })
+    });
 
     game.on('kill', piece => {
         const pieceImg = document.getElementById(piece.name);
-        pieceImg.parentNode.removeChild(pieceImg);
+        if (pieceImg?.parentNode) pieceImg.parentNode.removeChild(pieceImg);
         pieceImg.className = '';
 
         const sematary = piece.color === 'white' ? whiteSematary : blackSematary;
-        sematary.querySelector('.'+piece.rank).append(pieceImg);
+        sematary.querySelector('.' + piece.rank).append(pieceImg);
     });
 
     game.on('checkMate', color => {
         const endScene = document.getElementById('endscene');
-        endScene.getElementsByClassName('winning-sign')[0].innerHTML = color + ' Wins';
+        endScene.querySelector('.winning-sign').innerHTML = `${color} Wins`;
         endScene.classList.add('show');
         setGameState('checkmate');
     });
 
     startTurn('white');
 }
+
 
 const pieces = [
     { rank: 'knight', position: 12, color: 'white', name: 'whiteKnight1' },
